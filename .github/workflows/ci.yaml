@@ -114,19 +114,15 @@ jobs:
           # Some container images are based on Ubuntu, others on CentOS
           # Also, yum install may return non-zero exit code, why?
           before-script-linux: |
-            unzip -v || apt install unzip || echo "not apt"
-            unzip -v || yum install unzip || echo "not yum"
-            unzip -v
-            curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
-            unzip protoc-21.12-linux-x86_64.zip -d protoc3
+            which unzip || apt install unzip || echo "not apt"
+            which unzip || yum install unzip || echo "not yum"
+            which unzip
+            PROTOC=protoc-21.12-linux-x86_64.zip
+            if [ "$(arch)" == "i686" ]; then PROTOC=protoc-21.12-linux-x86_32.zip; fi
+            curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/$PROTOC
+            unzip $PROTOC -d protoc3
             mv -v protoc3/bin/* /usr/local/bin/
             mv -v protoc3/include/* /usr/local/include/
-            file $(which bash) || echo "no bash?"
-            file $(which protoc) || echo "protoc not in path"
-            file /usr/local/bin/protoc || echo "huh?"
-            ls -l /usr/local/bin || echo "huh?"
-            arch || echo "wtf"
-            export PATH=$PATH:/usr/local/bin
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -162,8 +158,10 @@ jobs:
           manylinux: musllinux_1_2
           before-script-linux: |
             apt install unzip
-            curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
-            unzip protoc-21.12-linux-x86_64.zip -d protoc3
+            PROTOC=protoc-21.12-linux-x86_64.zip
+            if [ "$(arch)" == "i686" ]; then PROTOC=protoc-21.12-linux-x86_32.zip; fi
+            curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/$PROTOC
+            unzip $PROTOC -d protoc3
             mv -v protoc3/bin/* /usr/local/bin/
             mv -v protoc3/include/* /usr/local/include/
       - name: Upload wheels
