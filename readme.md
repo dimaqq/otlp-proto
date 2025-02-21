@@ -47,6 +47,7 @@ class SomeExporter:
 - Events
 - Links
 - Baggage
+- Schemata, when https://github.com/open-telemetry/opentelemetry-python/pull/4359 lands
 
 ### TODO(fixes)
 

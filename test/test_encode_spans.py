@@ -1,11 +1,10 @@
+from __future__ import annotations
+
 import subprocess
 from unittest.mock import Mock
-from typing import Sequence
 
-from opentelemetry.sdk.trace import TracerProvider, ReadableSpan
-from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-from opentelemetry.exporter.otlp.proto.common._internal import trace_encoder
+import otlp_test_data
+
 import pytest
 from typing_extensions import reveal_type as reveal_type
 
@@ -13,24 +12,8 @@ import otlp_proto
 
 
 @pytest.fixture
-def sample_spans() -> Sequence[ReadableSpan]:
-    """Creates and finishes two spans, then returns them as a list."""
-    tracer_provider = TracerProvider()
-    exporter = InMemorySpanExporter()
-    tracer_provider.add_span_processor(SimpleSpanProcessor(exporter))
-    tracer = tracer_provider.get_tracer(__name__)
-
-    with tracer.start_as_current_span("span-one"):
-        pass
-    with tracer.start_as_current_span("span-two"):
-        pass
-
-    spans = exporter.get_finished_spans()
-    return spans
-
-
-@pytest.fixture
 def mock_span():
+    """Minimal OTEL-like API."""
     good = Mock()
     good.status_code.value = 0
 
@@ -55,20 +38,21 @@ def mock_span():
     return Span()
 
 
-def test_encode_spans(mock_span):
+def test_encode_spans(mock_span) -> None:
     otlp_proto.encode_spans([mock_span])
 
 
-def test_function_signature(sample_spans):
-    res = otlp_proto.encode_spans(sample_spans)
-    kwres: bytes = otlp_proto.encode_spans(sdk_spans=sample_spans)
+def test_function_signature() -> None:
+    res = otlp_proto.encode_spans(otlp_test_data.sample_spans())
+    kwres: bytes = otlp_proto.encode_spans(sdk_spans=otlp_test_data.sample_spans())
     assert res == kwres
 
 
-def test_equivalence(sample_spans):
-    ours = otlp_proto.encode_spans(sample_spans)
-    data = trace_encoder.encode_spans(sample_spans).SerializePartialToString()
-    assert text(ours) == text(data)
+def test_equivalence() -> None:
+    auth = otlp_test_data.sample_proto()
+    mine = otlp_proto.encode_spans(otlp_test_data.sample_spans())
+    assert text(mine) == text(auth)
+    assert mine == auth
 
 
 # TODO: skip tests is protoc is not in PATH
