@@ -103,7 +103,7 @@ jobs:
       - run: |
           set -vex
           curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
-          unzip protoc-21.12-linux-x86_64.zip -d proto3
+          unzip protoc-21.12-linux-x86_64.zip -d protoc3
           sudo mv -v protoc3/bin/* /usr/local/bin/
           sudo mv -v protoc3/include/* /usr/local/include/
       - uses: actions/checkout@v4
@@ -142,7 +142,7 @@ jobs:
       - run: |
           set -vex
           curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
-          unzip protoc-21.12-linux-x86_64.zip -d proto3
+          unzip protoc-21.12-linux-x86_64.zip -d protoc3
           sudo mv -v protoc3/bin/* /usr/local/bin/
           sudo mv -v protoc3/include/* /usr/local/include/
       - uses: actions/checkout@v4
