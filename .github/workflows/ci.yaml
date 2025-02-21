@@ -100,12 +100,6 @@ jobs:
           - runner: ubuntu-22.04
             target: ppc64le
     steps:
-      - run: |
-          set -vex
-          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
-          unzip protoc-21.12-linux-x86_64.zip -d protoc3
-          sudo mv -v protoc3/bin/* /usr/local/bin/
-          sudo mv -v protoc3/include/* /usr/local/include/
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -117,6 +111,11 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
+          before-script-linux: |
+            curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
+            unzip protoc-21.12-linux-x86_64.zip -d protoc3
+            sudo mv -v protoc3/bin/* /usr/local/bin/
+            sudo mv -v protoc3/include/* /usr/local/include/
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -139,12 +138,6 @@ jobs:
           - runner: ubuntu-22.04
             target: armv7
     steps:
-      - run: |
-          set -vex
-          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
-          unzip protoc-21.12-linux-x86_64.zip -d protoc3
-          sudo mv -v protoc3/bin/* /usr/local/bin/
-          sudo mv -v protoc3/include/* /usr/local/include/
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -156,6 +149,11 @@ jobs:
           args: --release --out dist --find-interpreter
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: musllinux_1_2
+          before-script-linux: |
+            curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
+            unzip protoc-21.12-linux-x86_64.zip -d protoc3
+            sudo mv -v protoc3/bin/* /usr/local/bin/
+            sudo mv -v protoc3/include/* /usr/local/include/
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
