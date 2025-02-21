@@ -11,20 +11,23 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
-        dep-versions: [--frozen, "--resolution lowest", "--resolution highest"]
     steps:
       - run: brew update && brew install protobuf
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv sync --all-groups ${{ matrix.dep-versions }}
           uv pip install .
+          uv sync --all-groups --resolution lowest
           uv pip freeze
           uv run pytest
           uv run pyright
           uv run ruff check
-          uv build
+          uv sync --all-groups --resolution highest
+          uv pip freeze
+          uv run pytest
+          uv run pyright
+          uv run ruff check
 
   ci-win:
     runs-on: windows-latest
@@ -32,20 +35,23 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
-        dep-versions: [--frozen, "--resolution lowest", "--resolution highest"]
     steps:
       - run: choco install protoc
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv sync --all-groups ${{ matrix.dep-versions }}
           uv pip install .
+          uv sync --all-groups --resolution lowest
           uv pip freeze
           uv run pytest
           uv run pyright
           uv run ruff check
-          uv build
+          uv sync --all-groups --resolution highest
+          uv pip freeze
+          uv run pytest
+          uv run pyright
+          uv run ruff check
 
   ci:
     runs-on: ubuntu-latest
@@ -53,25 +59,29 @@ jobs:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
-        dep-versions: [--frozen, "--resolution lowest", "--resolution highest"]
     steps:
       - run: sudo apt-get update && sudo apt-get install protobuf-compiler
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv sync --all-groups ${{ matrix.dep-versions }}
           uv pip install .
+          uv sync --all-groups --resolution lowest
           uv pip freeze
           uv run pytest
           uv run pyright
           uv run ruff check
-          uv build
+          uv sync --all-groups --resolution highest
+          uv pip freeze
+          uv run pytest
+          uv run pyright
+          uv run ruff check
 
   linux:
     needs: ci
     runs-on: ${{ matrix.platform.runner }}
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - runner: ubuntu-22.04
@@ -87,7 +97,12 @@ jobs:
           - runner: ubuntu-22.04
             target: ppc64le
     steps:
-      - run: sudo apt-get update && sudo apt-get install protobuf-compiler
+      - run: |
+          set -vex
+          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
+          unzip protoc-21.12-linux-x86_64.zip -d proto3
+          sudo mv -v protoc3/bin/* /usr/local/bin/
+          sudo mv -v protoc3/include/* /usr/local/include/
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -109,6 +124,7 @@ jobs:
     needs: ci
     runs-on: ${{ matrix.platform.runner }}
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - runner: ubuntu-22.04
@@ -120,7 +136,12 @@ jobs:
           - runner: ubuntu-22.04
             target: armv7
     steps:
-      - run: sudo apt-get update && sudo apt-get install protobuf-compiler
+      - run: |
+          set -vex
+          curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
+          unzip protoc-21.12-linux-x86_64.zip -d proto3
+          sudo mv -v protoc3/bin/* /usr/local/bin/
+          sudo mv -v protoc3/include/* /usr/local/include/
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -142,6 +163,7 @@ jobs:
     needs: ci-win
     runs-on: ${{ matrix.platform.runner }}
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - runner: windows-latest
@@ -171,6 +193,7 @@ jobs:
     needs: ci-mac
     runs-on: ${{ matrix.platform.runner }}
     strategy:
+      fail-fast: false
       matrix:
         platform:
           - runner: macos-13
