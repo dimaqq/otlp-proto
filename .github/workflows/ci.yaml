@@ -121,6 +121,12 @@ jobs:
             unzip protoc-21.12-linux-x86_64.zip -d protoc3
             mv -v protoc3/bin/* /usr/local/bin/
             mv -v protoc3/include/* /usr/local/include/
+            file $(which bash) || echo "no bash?"
+            file $(which protoc) || echo "protoc not in path"
+            file /usr/local/bin/protoc || echo "huh?"
+            ls -l /usr/local/bin || echo "huh?"
+            arch || echo "wtf"
+            export PATH=$PATH:/usr/local/bin
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
