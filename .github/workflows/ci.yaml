@@ -112,7 +112,7 @@ jobs:
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
           before-script-linux: |
-            sudo apt install unzip
+            apt install unzip || sudo apt install unzip
             curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
             unzip protoc-21.12-linux-x86_64.zip -d protoc3
             sudo mv -v protoc3/bin/* /usr/local/bin/
@@ -151,7 +151,7 @@ jobs:
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: musllinux_1_2
           before-script-linux: |
-            sudo apt install unzip
+            apt install unzip || sudo apt install unzip
             curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
             unzip protoc-21.12-linux-x86_64.zip -d protoc3
             sudo mv -v protoc3/bin/* /usr/local/bin/
