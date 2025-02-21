@@ -114,15 +114,13 @@ jobs:
           # Some container images are based on Ubuntu, others on CentOS
           # Also, yum install may return non-zero exit code, why?
           before-script-linux: |
-            whoami || echo "oops"
-            find / -name unzip || echo "oops"
-            unzip -v || apt install unzip || sudo apt install unzip || echo "that didn't work"
-            unzip -v || yum install unzip || sudo yum install unzip || echo "that too didn't work"
+            unzip -v || apt install unzip || echo "not apt"
+            unzip -v || yum install unzip || echo "not yum"
             unzip -v
             curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
             unzip protoc-21.12-linux-x86_64.zip -d protoc3
-            sudo mv -v protoc3/bin/* /usr/local/bin/
-            sudo mv -v protoc3/include/* /usr/local/include/
+            mv -v protoc3/bin/* /usr/local/bin/
+            mv -v protoc3/include/* /usr/local/include/
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
@@ -130,7 +128,7 @@ jobs:
           path: dist
 
   musllinux:
-    needs: ci
+    # needs: ci  # FIXME
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -157,11 +155,11 @@ jobs:
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: musllinux_1_2
           before-script-linux: |
-            apt install unzip || sudo apt install unzip
+            apt install unzip
             curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-x86_64.zip
             unzip protoc-21.12-linux-x86_64.zip -d protoc3
-            sudo mv -v protoc3/bin/* /usr/local/bin/
-            sudo mv -v protoc3/include/* /usr/local/include/
+            mv -v protoc3/bin/* /usr/local/bin/
+            mv -v protoc3/include/* /usr/local/include/
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
