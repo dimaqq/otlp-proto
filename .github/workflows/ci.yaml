@@ -81,7 +81,7 @@ jobs:
           uv run ruff check
 
   linux:
-    # needs: ci  # FIXME
+    needs: ci
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -112,7 +112,6 @@ jobs:
           sccache: ${{ !startsWith(github.ref, 'refs/tags/') }}
           manylinux: auto
           # Some container images are based on Ubuntu, others on CentOS
-          # Also, yum install may return non-zero exit code, why?
           before-script-linux: |
             which unzip || apt install unzip || echo "not apt"
             which unzip || yum install unzip || echo "not yum"
@@ -130,7 +129,7 @@ jobs:
           path: dist
 
   musllinux:
-    # needs: ci  # FIXME
+    needs: ci
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -264,8 +263,11 @@ jobs:
           subject-path: 'wheels-*/*'
       - name: Publish to PyPI
         uses: PyO3/maturin-action@v1
-        env:
-          MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
           command: upload
-          args: --non-interactive --skip-existing wheels-*/*
+          args: --non-interactive --skip-existing --verbose --repository-url https://test.pypi.org/legacy/ wheels-*/*
+      - name: Publish to PyPI
+        uses: PyO3/maturin-action@v1
+        with:
+          command: upload
+          args: --non-interactive --skip-existing --verbose wheels-*/*
