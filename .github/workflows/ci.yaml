@@ -87,6 +87,7 @@ jobs:
           - runner: ubuntu-22.04
             target: ppc64le
     steps:
+      - run: sudo apt-get update && sudo apt-get install protobuf-compiler
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -119,6 +120,7 @@ jobs:
           - runner: ubuntu-22.04
             target: armv7
     steps:
+      - run: sudo apt-get update && sudo apt-get install protobuf-compiler
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -147,6 +149,7 @@ jobs:
           - runner: windows-latest
             target: x86
     steps:
+      - run: choco install protoc
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -175,6 +178,7 @@ jobs:
           - runner: macos-14
             target: aarch64
     steps:
+      - run: brew update && brew install protobuf
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
