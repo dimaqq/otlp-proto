@@ -422,13 +422,13 @@ dev = [
     { name = "ruff", specifier = "~=0.9" },
 ]
 testing = [
-    { name = "otlp-test-data", specifier = ">=0.9.3" },
+    { name = "otlp-test-data", specifier = "==0.9.4" },
     { name = "pytest", specifier = "~=8.3.4" },
 ]
 
 [[package]]
 name = "otlp-test-data"
-version = "0.9.3"
+version = "0.9.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "freezegun" },
@@ -437,9 +437,9 @@ dependencies = [
     { name = "opentelemetry-exporter-otlp" },
     { name = "opentelemetry-exporter-otlp-proto-http" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2c/c0/793b9749aca93093f8ac0fe4834da272248d7b69c3e9d2978cd078235b69/otlp_test_data-0.9.3.tar.gz", hash = "sha256:6f000633f74bc72712e8e5fa8036c293bb51e8262c0f61f4d24396e52f6362f4", size = 3238 }
+sdist = { url = "https://files.pythonhosted.org/packages/41/08/4ce5898c047c6a209802ab1e44eff2185d555fcdf294951b3a0b34aa7002/otlp_test_data-0.9.4.tar.gz", hash = "sha256:0cb6b80cae44fcdb978dee8b23e0a7e484b312e1aea8eb8e2db4ca4214c2d5f4", size = 37067 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/87/73601842eca2e28669b6fb2f43449d17d4ccd9232145dcf9fa79afc8a34a/otlp_test_data-0.9.3-py3-none-any.whl", hash = "sha256:49a35471189f288d90545b93e031d3b03415a1c2cdaa49711dc7deb50313dd65", size = 2938 },
+    { url = "https://files.pythonhosted.org/packages/5e/42/263508c45f47d58a9b0d15f69d96acfd20b9f85692133a123391fa987ce9/otlp_test_data-0.9.4-py3-none-any.whl", hash = "sha256:101f7da23d3fdb51b1de6141ac219008b057a7f16b4e43a2e6e75bbfff5f8dd9", size = 2768 },
 ]
 
 [[package]]
