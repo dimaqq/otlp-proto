@@ -47,25 +47,45 @@ use crate::otlp::{
 /// Convert something that satisfies Python dict[str, str] protocol.
 /// Must be done with a hack, because OTEL attributes are a mapping, not a dict.
 fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
-    let mut rv = Vec::new();
     let items = py_mapping.call_method0("items")?.try_iter()?;
-    for kv in items {
-        let pair = kv?;
-        let k = pair.get_item(0)?.extract::<String>();
-        let v = pair.get_item(1)?.extract::<String>();
-        if let (Ok(key), Ok(value)) = (k, v) {
-            rv.push(KeyValue {
+    Ok(items
+        .filter_map(|item| {
+            let pair = item.ok()?;
+            let key = pair.get_item(0).ok()?.extract::<String>().ok()?;
+            let v = pair.get_item(1).ok()?;
+
+            // https://opentelemetry.io/docs/specs/otel/common/attribute-type-mapping/
+            let value = if let Ok(b) = v.extract::<bool>() {
+                Value::BoolValue(b)
+            } else if let Ok(n) = v.extract::<i64>() {
+                Value::IntValue(n)
+            } else if let Ok(f) = v.extract::<f64>() {
+                Value::DoubleValue(f)
+            } else if let Ok(s) = v.extract::<String>() {
+                Value::StringValue(s)
+            // FIXME: are bytes allowed?
+            // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md
+            } else if let Ok(b) = v.extract::<Vec<u8>>() {
+                Value::BytesValue(b)
+            // FIXME: not sure about this, would this not break out for a bad value?
+            } else if let Ok(s) = v.str().ok()?.extract::<String>() {
+                Value::StringValue(s)
+            } else {
+                // FIXME: the attribute type mapping appears to suggest that empty values
+                // are OK, yielding an AnyValue with every field unset
+                // However, I think that OTLP spec is clear that attributes should only be
+                // bool|int|float|str or a homogeneous array thereof.
+                return None;
+            };
+            // FIXME: arrays of things... to ArrayValue
+            // FIXME: mappings of things... to KeyValueList
+
+            Some(KeyValue {
                 key,
-                value: Some(AnyValue {
-                    // FIXME:
-                    // plain types: str,int,float,bool but not None
-                    // and homogeneous arrays: list[str],list[int],...
-                    value: Some(Value::StringValue(value)),
-                }),
-            });
-        }
-    }
-    Ok(rv)
+                value: Some(AnyValue { value: Some(value) }),
+            })
+        })
+        .collect())
 }
 
 /// Encode `sdk_spans` into an OTLP 1.5 Protobuf, serialise and return `bytes`.
