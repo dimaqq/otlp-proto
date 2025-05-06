@@ -29,6 +29,10 @@ classifiers = [
 ]
 dependencies = []
 
+[project.urls]
+"Repository" = "https://github.com/dimaqq/otlp-proto"
+"Issues" = "https://github.com/dimaqq/otlp-proto/issues"
+
 [dependency-groups]
 dev = [
     "maturin ~= 1.8",
