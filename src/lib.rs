@@ -39,9 +39,9 @@ mod otlp {
 
 use crate::otlp::{
     collector::trace::v1::ExportTraceServiceRequest,
-    common::v1::{any_value::Value, AnyValue, InstrumentationScope, KeyValue},
+    common::v1::{AnyValue, InstrumentationScope, KeyValue, any_value::Value},
     resource::v1::Resource,
-    trace::v1::{span::SpanKind, ResourceSpans, ScopeSpans, Span, Status},
+    trace::v1::{ResourceSpans, ScopeSpans, Span, Status, span::SpanKind},
 };
 
 /// Convert something that satisfies Python dict[str, str] protocol.
@@ -96,8 +96,9 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
 /// Returns:
 ///     bytes(opentelemetry/proto/collector/trace/v1/trace_service.proto:ExportTraceServiceRequest)
 #[pyfunction]
-#[pyo3(signature = (sdk_spans))]
-fn encode_spans(sdk_spans: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
+#[pyo3(signature = (sdk_spans), pass_module)]
+fn encode_spans(_m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
+    //fn encode_spans(sdk_spans: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
     // Incoming data shape:
     // spans[]:
     //   span{}:
@@ -142,6 +143,12 @@ fn encode_spans(sdk_spans: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
         )?;
         let kwargs = [("key", key_func)].into_py_dict(py)?;
         let spans = builtins.call_method("sorted", (sdk_spans.as_ref(),), Some(&kwargs))?;
+
+        // temp
+        // let lineariser: &PyAny = /* … */;
+        // let span: &PyAny = sdk_spans[0];
+        // let key: PyObject = lineariser.call(py, (span,))?;
+        // end temp
 
         let mut last_resource = py.None().into_pyobject(py)?;
         let mut last_scope = py.None().into_pyobject(py)?;
