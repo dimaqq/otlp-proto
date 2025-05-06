@@ -278,5 +278,8 @@ fn encode_spans(_m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyRes
 #[pymodule(gil_used = false)]
 fn otlp_proto(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encode_spans, m)?)?;
-    Python::with_gil(|py| m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf")))
+    m.add(
+        "CONTENT_TYPE",
+        PyString::new(m.py(), "application/x-protobuf"),
+    )
 }
