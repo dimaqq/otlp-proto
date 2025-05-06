@@ -1,7 +1,7 @@
 use prost::Message;
 use pyo3::ffi::c_str;
 use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
+use pyo3::types::{IntoPyDict, PyString};
 
 mod otlp {
     pub mod common {
@@ -277,5 +277,6 @@ fn encode_spans(_m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyRes
 /// 🐍Lightweight OTEL span to binary converter, written in Rust🦀
 #[pymodule(gil_used = false)]
 fn otlp_proto(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(encode_spans, m)?)
+    m.add_function(wrap_pyfunction!(encode_spans, m)?)?;
+    Python::with_gil(|py| m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf")))
 }

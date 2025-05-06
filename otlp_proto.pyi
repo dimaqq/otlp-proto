@@ -8,3 +8,5 @@ if TYPE_CHECKING:
 def encode_spans(
     sdk_spans: Sequence[opentelemetry.sdk.trace.ReadableSpan],
 ) -> bytes: ...
+
+CONTENT_TYPE: str
