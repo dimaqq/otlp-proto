@@ -1,7 +1,7 @@
 use prost::Message;
 use pyo3::ffi::c_str;
 use pyo3::prelude::*;
-use pyo3::types::{IntoPyDict, PyString};
+use pyo3::types::{IntoPyDict, PyAny, PyDict, PyString, PyTuple};
 
 mod otlp {
     pub mod common {
@@ -88,6 +88,25 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
         .collect())
 }
 
+#[pyfunction]
+fn linearise(py: Python<'_>,
+             resource_cache: Bound<'_, PyDict>,
+             scope_cache: Bound<'_, PyDict>,
+             span: Bound<'_, PyAny>) -> PyResult<PyObject> {
+    let r = span.getattr("resource")?;
+    if !resource_cache.contains(r)? {
+        resource_cache.set_item(r, py.Ellipsis());
+    }
+    let s = span.getattr("instrumentation_scope")?;
+    if !scope_cache.contains(s)? {
+        scope_cache.set_item(s, py.Ellipsis());
+    }
+
+    //Ok(PyTuple::new(py, &[v1, v2]).to_object(py))
+    //Ok(PyTuple::new(py, &[r, s])?.unbind())
+    Ok(r.unbind())
+}
+
 /// Encode `sdk_spans` into an OTLP 1.5 Protobuf, serialise and return `bytes`.
 ///
 /// Args:
@@ -159,6 +178,7 @@ fn encode_spans(_m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyRes
 
         for item in spans.try_iter()? {
             let span = item?;
+            // FIXME debug let _: () = span;
             // .resource cannot be None
             if !span.getattr("resource")?.is(&last_resource) {
                 last_resource = span.getattr("resource")?;
@@ -274,9 +294,17 @@ fn encode_spans(_m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyRes
     // Links
 }
 
+#[pyfunction]
+fn test_tuple(py: Python<'_>, arg: Bound<'_, PyAny>) -> PyResult<PyObject> {
+    let builtins = PyModule::import(py, "builtins")?;
+    let rv = builtins.call_method1("tuple", (arg.as_ref(),))?;
+    Ok(rv.unbind())
+}
+
 /// 🐍Lightweight OTEL span to binary converter, written in Rust🦀
 #[pymodule(gil_used = false)]
 fn otlp_proto(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(encode_spans, m)?)?;
+    m.add_function(wrap_pyfunction!(test_tuple, m)?)?;
     Python::with_gil(|py| m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf")))
 }
