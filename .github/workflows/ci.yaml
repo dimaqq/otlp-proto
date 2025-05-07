@@ -54,6 +54,7 @@ jobs:
           uv run pytest
           uv run pyright
           uv run ruff check
+        shell: bash
 
   ci:
     runs-on: ubuntu-latest
