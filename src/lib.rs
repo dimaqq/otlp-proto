@@ -1,5 +1,5 @@
 use prost::Message;
-use pyo3::ffi::c_str;
+//use pyo3::ffi::c_str;
 use pyo3::prelude::*;
 use pyo3::types::{IntoPyDict, PyAny, PyDict, PyString, PyTuple};
 
@@ -89,22 +89,59 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
 }
 
 #[pyfunction]
-fn linearise(py: Python<'_>,
-             resource_cache: Bound<'_, PyDict>,
-             scope_cache: Bound<'_, PyDict>,
-             span: Bound<'_, PyAny>) -> PyResult<PyObject> {
+#[pyo3(signature = (resource_cache, scope_cache, span))]
+fn _linearise(
+    py: Python<'_>,
+    resource_cache: Bound<'_, PyDict>,
+    scope_cache: Bound<'_, PyDict>,
+    span: Bound<'_, PyAny>,
+) -> PyResult<PyObject> {
+    let builtins = PyModule::import(py, "builtins")?;
     let r = span.getattr("resource")?;
-    if !resource_cache.contains(r)? {
-        resource_cache.set_item(r, py.Ellipsis());
+    if !resource_cache.contains(r.as_ref())? {
+        resource_cache.set_item(
+            r.as_ref(),
+            PyTuple::new(
+                py,
+                &[
+                    &r.getattr("scheme_url")?,
+                    &builtins.call_method1(
+                        "tuple",
+                        (r.getattr("attributes")?.call_method0("items")?,),
+                    )?,
+                ],
+            )?,
+        )?;
     }
     let s = span.getattr("instrumentation_scope")?;
-    if !scope_cache.contains(s)? {
-        scope_cache.set_item(s, py.Ellipsis());
+    if !scope_cache.contains(s.as_ref())? {
+        scope_cache.set_item(
+            s.as_ref(),
+            PyTuple::new(
+                py,
+                &[
+                    &s.getattr("scheme_url")?,
+                    &s.getattr("name")?,
+                    &s.getattr("version")?,
+                    &builtins.call_method1(
+                        "tuple",
+                        (r.getattr("attributes")?.call_method0("items")?,),
+                    )?,
+                ],
+            )?,
+        )?;
     }
 
     //Ok(PyTuple::new(py, &[v1, v2]).to_object(py))
     //Ok(PyTuple::new(py, &[r, s])?.unbind())
-    Ok(r.unbind())
+    let rv = PyTuple::new(
+        py,
+        &[
+            &resource_cache.get_item(r.as_ref())?,
+            &scope_cache.get_item(s.as_ref())?,
+        ],
+    )?;
+    Ok(rv.into_any().unbind())
 }
 
 /// Encode `sdk_spans` into an OTLP 1.5 Protobuf, serialise and return `bytes`.
@@ -116,7 +153,7 @@ fn linearise(py: Python<'_>,
 ///     bytes(opentelemetry/proto/collector/trace/v1/trace_service.proto:ExportTraceServiceRequest)
 #[pyfunction]
 #[pyo3(signature = (sdk_spans), pass_module)]
-fn encode_spans(_m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
+fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
     //fn encode_spans(sdk_spans: &Bound<'_, PyAny>) -> PyResult<Vec<u8>> {
     // Incoming data shape:
     // spans[]:
@@ -155,12 +192,18 @@ fn encode_spans(_m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyRes
         // The spans we're asked to send were created in this process
         // and are in memory. Thus, logically same resource is actually
         // the very same resource object. Same holds for inst. scope.
-        let key_func = py.eval(
-            c_str!("lambda e: (id(e.resource), id(e.instrumentation_scope))"),
-            None,
-            None,
-        )?;
-        let kwargs = [("key", key_func)].into_py_dict(py)?;
+        // let key_func = py.eval(
+        // c_str!("lambda e: (id(e.resource), id(e.instrumentation_scope))"),
+        // None,
+        // None,
+        // )?;
+        //let _: () = key_func;
+        //let _: () = wrap_function!(linearise);
+        //let key_func: fn(Python<'_>, Bound<'_, PyDict>, Bound<'_, PyDict>, Bound<'_, PyAny>) -> PyResult<PyObject> = linearise;
+        //let _ : () = key_func;
+        //let _ : () = m.getattr("_linearise")?;
+        //let kwargs = [("key", key_func)].into_py_dict(py)?;
+        let kwargs = [("key", m.getattr("_linearise")?)].into_py_dict(py)?;
         let spans = builtins.call_method("sorted", (sdk_spans.as_ref(),), Some(&kwargs))?;
 
         // temp
@@ -304,7 +347,13 @@ fn test_tuple(py: Python<'_>, arg: Bound<'_, PyAny>) -> PyResult<PyObject> {
 /// 🐍Lightweight OTEL span to binary converter, written in Rust🦀
 #[pymodule(gil_used = false)]
 fn otlp_proto(m: &Bound<'_, PyModule>) -> PyResult<()> {
+    Python::with_gil(|py| -> PyResult<()> {
+        m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf"))?;
+        m.add("functools", py.import("functools")?)?;
+        Ok(())
+    })?;
     m.add_function(wrap_pyfunction!(encode_spans, m)?)?;
     m.add_function(wrap_pyfunction!(test_tuple, m)?)?;
-    Python::with_gil(|py| m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf")))
+    m.add_function(wrap_pyfunction!(_linearise, m)?)?;
+    Ok(())
 }
