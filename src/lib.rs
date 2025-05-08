@@ -63,7 +63,7 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
                 Value::DoubleValue(f)
             } else if let Ok(s) = v.extract::<String>() {
                 Value::StringValue(s)
-            // FIXME: are bytes allowed?
+            // FIXME: Yes, bytes are now allowed!
             // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/common/README.md
             } else if let Ok(b) = v.extract::<Vec<u8>>() {
                 Value::BytesValue(b)
@@ -132,8 +132,6 @@ fn _linearise(
         )?;
     }
 
-    //Ok(PyTuple::new(py, &[v1, v2]).to_object(py))
-    //Ok(PyTuple::new(py, &[r, s])?.unbind())
     let rv = PyTuple::new(
         py,
         &[
@@ -189,20 +187,6 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
 
     Python::with_gil(|py| {
         let builtins = PyModule::import(py, "builtins")?;
-        // The spans we're asked to send were created in this process
-        // and are in memory. Thus, logically same resource is actually
-        // the very same resource object. Same holds for inst. scope.
-        // let key_func = py.eval(
-        // c_str!("lambda e: (id(e.resource), id(e.instrumentation_scope))"),
-        // None,
-        // None,
-        // )?;
-        //let _: () = key_func;
-        //let _: () = wrap_function!(linearise);
-        //let key_func: fn(Python<'_>, Bound<'_, PyDict>, Bound<'_, PyDict>, Bound<'_, PyAny>) -> PyResult<PyObject> = linearise;
-        //let _ : () = key_func;
-        //let _ : () = m.getattr("_linearise")?;
-        //let kwargs = [("key", key_func)].into_py_dict(py)?;
         let resource_cache = PyDict::new(py);
         let scope_cache = PyDict::new(py);
         let key = m.getattr("functools")?.call_method1(
@@ -221,7 +205,6 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
 
         for item in spans.try_iter()? {
             let span = item?;
-            // FIXME debug let _: () = span;
             // .resource cannot be None
             if !span.getattr("resource")?.is(&last_resource) {
                 last_resource = span.getattr("resource")?;
@@ -251,7 +234,7 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
                         scope: Some(InstrumentationScope {
                             // TODO can name be missing?
                             name: last_scope.getattr("name")?.extract::<String>()?,
-                            // TODO what is version is missing?
+                            // TODO what if the version is missing?
                             version: last_scope.getattr("version")?.extract::<String>()?,
                             // schema_url: ...
                             ..Default::default()
