@@ -23,10 +23,12 @@ def mock_span():
 
     class Resource:
         attributes = dict()
+        schema_url = ""
 
     class Scope:
         name = "foo"
         version = "1.2.3"
+        schema_url = ""
 
     class Span:
         name = "booya"

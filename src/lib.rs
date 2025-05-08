@@ -104,7 +104,7 @@ fn _linearise(
             PyTuple::new(
                 py,
                 &[
-                    &r.getattr("scheme_url")?,
+                    &r.getattr("schema_url")?,
                     &builtins.call_method1(
                         "tuple",
                         (r.getattr("attributes")?.call_method0("items")?,),
@@ -120,7 +120,7 @@ fn _linearise(
             PyTuple::new(
                 py,
                 &[
-                    &s.getattr("scheme_url")?,
+                    &s.getattr("schema_url")?,
                     &s.getattr("name")?,
                     &s.getattr("version")?,
                     &builtins.call_method1(
@@ -203,14 +203,14 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
         //let _ : () = key_func;
         //let _ : () = m.getattr("_linearise")?;
         //let kwargs = [("key", key_func)].into_py_dict(py)?;
-        let kwargs = [("key", m.getattr("_linearise")?)].into_py_dict(py)?;
+        let resource_cache = PyDict::new(py);
+        let scope_cache = PyDict::new(py);
+        let key = m.getattr("functools")?.call_method1(
+            "partial",
+            (m.getattr("_linearise")?, resource_cache, scope_cache),
+        )?;
+        let kwargs = [("key", key)].into_py_dict(py)?;
         let spans = builtins.call_method("sorted", (sdk_spans.as_ref(),), Some(&kwargs))?;
-
-        // temp
-        // let lineariser: &PyAny = /* … */;
-        // let span: &PyAny = sdk_spans[0];
-        // let key: PyObject = lineariser.call(py, (span,))?;
-        // end temp
 
         let mut last_resource = py.None().into_pyobject(py)?;
         let mut last_scope = py.None().into_pyobject(py)?;
