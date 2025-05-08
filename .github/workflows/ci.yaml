@@ -5,12 +5,13 @@ on:
     branches: [main]
 
 jobs:
-  ci-mac:
+  test-on-mac:
     runs-on: macos-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
+        dep-versions: [--frozen, "--resolution lowest", "--resolution highest --upgrade"]
     steps:
       - run: brew update && brew install protobuf
       - uses: actions/checkout@v4
@@ -19,23 +20,19 @@ jobs:
           uv python install ${{ matrix.python-version }}
           uv venv
           uv pip install .
-          uv sync --all-groups --resolution lowest
-          uv pip freeze
-          uv run pytest
-          uv run pyright
-          uv run ruff check
-          uv sync --all-groups --resolution highest
+          uv sync --all-groups ${{ matrix.dep-versions }}
           uv pip freeze
           uv run pytest
           uv run pyright
           uv run ruff check
 
-  ci-win:
+  test-on-win:
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
+        dep-versions: [--frozen, "--resolution lowest", "--resolution highest --upgrade"]
     steps:
       - run: choco install protoc
       - uses: actions/checkout@v4
@@ -44,24 +41,20 @@ jobs:
           uv python install ${{ matrix.python-version }}
           uv venv
           uv pip install .
-          uv sync --all-groups --resolution lowest
-          uv pip freeze
-          uv run pytest
-          uv run pyright
-          uv run ruff check
-          uv sync --all-groups --resolution highest
+          uv sync --all-groups ${{ matrix.dep-versions }}
           uv pip freeze
           uv run pytest
           uv run pyright
           uv run ruff check
         shell: bash
 
-  ci:
+  test-on-linux:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
+        dep-versions: [--frozen, "--resolution lowest", "--resolution highest --upgrade"]
     steps:
       - run: sudo apt-get update && sudo apt-get install protobuf-compiler
       - uses: actions/checkout@v4
@@ -70,19 +63,14 @@ jobs:
           uv python install ${{ matrix.python-version }}
           uv venv
           uv pip install .
-          uv sync --all-groups --resolution lowest
-          uv pip freeze
-          uv run pytest
-          uv run pyright
-          uv run ruff check
-          uv sync --all-groups --resolution highest
+          uv sync --all-groups ${{ matrix.dep-versions }}
           uv pip freeze
           uv run pytest
           uv run pyright
           uv run ruff check
 
   linux:
-    needs: ci
+    needs: test-on-linux
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -130,7 +118,7 @@ jobs:
           path: dist
 
   musllinux:
-    needs: ci
+    needs: test-on-linux
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -171,7 +159,7 @@ jobs:
           path: dist
 
   windows:
-    needs: ci-win
+    needs: test-on-win
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -201,7 +189,7 @@ jobs:
           path: dist
 
   macos:
-    needs: ci-mac
+    needs: test-on-mac
     runs-on: ${{ matrix.platform.runner }}
     strategy:
       fail-fast: false
@@ -230,7 +218,7 @@ jobs:
           path: dist
 
   sdist:
-    needs: ci
+    needs: test-on-linux
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
