@@ -18,9 +18,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv venv
-          uv pip install .
-          uv sync --all-groups ${{ matrix.dep-versions }}
+          # uv venv
+          # uv pip install .
+          uv sync --all-groups ${{ matrix.dep-versions }} --python ${{ matrix.python-version }}
           uv pip freeze
           uv run pytest
           uv run pyright
@@ -39,9 +39,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv venv
-          uv pip install .
-          uv sync --all-groups ${{ matrix.dep-versions }}
+          # uv venv
+          # uv pip install .
+          uv sync --all-groups ${{ matrix.dep-versions }} --python ${{ matrix.python-version }}
           uv pip freeze
           uv run pytest
           uv run pyright
@@ -61,9 +61,9 @@ jobs:
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv venv
-          uv pip install .
-          uv sync --all-groups ${{ matrix.dep-versions }}
+          # uv venv
+          # uv pip install .
+          uv sync --all-groups ${{ matrix.dep-versions }} --python ${{ matrix.python-version }}
           uv pip freeze
           uv run pytest
           uv run pyright
@@ -88,6 +88,8 @@ jobs:
             target: s390x
           - runner: ubuntu-22.04
             target: ppc64le
+          - runner: ubuntu-22.04
+            target: riscv64gc
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -132,6 +134,8 @@ jobs:
             target: aarch64
           - runner: ubuntu-22.04
             target: armv7
+          - runner: ubuntu-22.04
+            target: riscv64gc
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
