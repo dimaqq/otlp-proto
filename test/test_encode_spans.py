@@ -3,12 +3,12 @@ from __future__ import annotations
 import subprocess
 from unittest.mock import Mock
 
-import otlp_test_data
-
 import pytest
 from typing_extensions import reveal_type as reveal_type
 
 import otlp_proto
+
+otlp_test_data = pytest.importorskip("otlp_test_data")
 
 
 @pytest.fixture

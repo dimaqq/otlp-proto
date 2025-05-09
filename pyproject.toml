@@ -37,12 +37,17 @@ dependencies = []
 dev = [
     "maturin ~= 1.8",
     "opentelemetry-api ~= 1.30",  # 1.30 fixed type hints for Python 3.8
-    "pyright ~= 1.1",
+    "opentelemetry-sdk ~= 1.30",  # Only needed for types in otlp_proto.pyi
+    "pyright >= 1.1.383",
     "ruff ~= 0.9",
 ]
 testing = [
     "pytest ~= 8.3.4",
-    "otlp-test-data == 0.9.4",  # FIXME temporary
+    "typing_extensions >= 4.1.0",
+]
+equivalence-testing = [
+    # FIXME needs an update, which needs fixes in the Rust implementation
+    "otlp-test-data == 0.9.4",
 ]
 
 [build-system]

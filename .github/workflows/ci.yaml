@@ -10,42 +10,49 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
+        # Note: 3.14 is waiting for https://github.com/PyO3/pyo3/issues/5107
+        python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t]
         dep-versions: [--frozen, "--resolution lowest", "--resolution highest --upgrade"]
+    env:
+      UV_ARGS: >
+            --all-groups
+            ${{ endsWith(matrix.python-version, 't') && '--no-group equivalence-testing' || '' }}
+            ${{ matrix.dep-versions }}
+            --python ${{ matrix.python-version }}
     steps:
       - run: brew update && brew install protobuf
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv venv
-          uv pip install .
-          uv sync --all-groups ${{ matrix.dep-versions }}
+          uv run $UV_ARGS pytest
+          uv run $UV_ARGS pyright
+          uv run $UV_ARGS ruff check
           uv pip freeze
-          uv run pytest
-          uv run pyright
-          uv run ruff check
 
   test-on-win:
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
+        python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t]
         dep-versions: [--frozen, "--resolution lowest", "--resolution highest --upgrade"]
+    env:
+      UV_ARGS: >
+            --all-groups
+            ${{ endsWith(matrix.python-version, 't') && '--no-group equivalence-testing' || '' }}
+            ${{ matrix.dep-versions }}
+            --python ${{ matrix.python-version }}
     steps:
       - run: choco install protoc
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv venv
-          uv pip install .
-          uv sync --all-groups ${{ matrix.dep-versions }}
+          uv run $UV_ARGS pytest
+          uv run $UV_ARGS pyright
+          uv run $UV_ARGS ruff check
           uv pip freeze
-          uv run pytest
-          uv run pyright
-          uv run ruff check
         shell: bash
 
   test-on-linux:
@@ -53,21 +60,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t, 3.14]
+        python-version: [3.8, 3.9, "3.10", 3.11, 3.12, 3.13, 3.13t]
         dep-versions: [--frozen, "--resolution lowest", "--resolution highest --upgrade"]
+    env:
+      UV_ARGS: >
+            --all-groups
+            ${{ endsWith(matrix.python-version, 't') && '--no-group equivalence-testing' || '' }}
+            ${{ matrix.dep-versions }}
+            --python ${{ matrix.python-version }}
     steps:
       - run: sudo apt-get update && sudo apt-get install protobuf-compiler
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
       - run: |
           uv python install ${{ matrix.python-version }}
-          uv venv
-          uv pip install .
-          uv sync --all-groups ${{ matrix.dep-versions }}
+          uv run $UV_ARGS pytest
+          uv run $UV_ARGS pyright
+          uv run $UV_ARGS ruff check
           uv pip freeze
-          uv run pytest
-          uv run pyright
-          uv run ruff check
 
   linux:
     needs: test-on-linux
@@ -88,6 +98,8 @@ jobs:
             target: s390x
           - runner: ubuntu-22.04
             target: ppc64le
+          # - runner: ubuntu-22.04
+            # target: riscv64gc
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -132,6 +144,9 @@ jobs:
             target: aarch64
           - runner: ubuntu-22.04
             target: armv7
+          #   error: toolchain 'stable-x86_64-unknown-linux-gnu' does not support target 'riscv64gc'
+          #- runner: ubuntu-22.04
+            #target: riscv64gc
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
