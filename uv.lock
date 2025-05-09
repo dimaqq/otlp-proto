@@ -492,8 +492,10 @@ dev = [
     { name = "pyright" },
     { name = "ruff" },
 ]
-testing = [
+equivalence-testing = [
     { name = "otlp-test-data" },
+]
+testing = [
     { name = "pytest" },
 ]
 
@@ -506,10 +508,8 @@ dev = [
     { name = "pyright", specifier = "~=1.1" },
     { name = "ruff", specifier = "~=0.9" },
 ]
-testing = [
-    { name = "otlp-test-data", specifier = "==0.9.4" },
-    { name = "pytest", specifier = "~=8.3.4" },
-]
+equivalence-testing = [{ name = "otlp-test-data", specifier = "==0.9.4" }]
+testing = [{ name = "pytest", specifier = "~=8.3.4" }]
 
 [[package]]
 name = "otlp-test-data"

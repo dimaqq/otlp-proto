@@ -42,7 +42,10 @@ dev = [
 ]
 testing = [
     "pytest ~= 8.3.4",
-    "otlp-test-data == 0.9.4",  # FIXME temporary
+]
+equivalence-testing = [
+    # FIXME needs an update, which needs fixes in the Rust implementation
+    "otlp-test-data == 0.9.4",
 ]
 
 [build-system]
