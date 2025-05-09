@@ -354,6 +354,7 @@ source = { editable = "." }
 dev = [
     { name = "maturin" },
     { name = "opentelemetry-api" },
+    { name = "opentelemetry-sdk" },
     { name = "pyright" },
     { name = "ruff" },
 ]
@@ -371,7 +372,8 @@ testing = [
 dev = [
     { name = "maturin", specifier = "~=1.8" },
     { name = "opentelemetry-api", specifier = "~=1.30" },
-    { name = "pyright", specifier = "~=1.1" },
+    { name = "opentelemetry-sdk", specifier = "~=1.30" },
+    { name = "pyright", specifier = ">=1.1.383" },
     { name = "ruff", specifier = "~=0.9" },
 ]
 equivalence-testing = [{ name = "otlp-test-data", specifier = "==0.9.4" }]
@@ -434,14 +436,15 @@ wheels = [
 
 [[package]]
 name = "pyright"
-version = "1.1.224.post0"
+version = "1.1.383"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "nodeenv" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/b1/9b/4b8b2fe95546c85dddb86bf4d3e4441d298093f72722f4cddf5eab55a84d/pyright-1.1.224.post0.tar.gz", hash = "sha256:c987d31d9d5dcf960a68ee94c6f0699b43209b48ee46504f62971c1fef221b09", size = 14521, upload-time = "2022-02-25T20:06:08.171Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/78/a9/4654d15f4125d8dca6318d7be36a3283a8b3039661291c59bbdd1e576dcf/pyright-1.1.383.tar.gz", hash = "sha256:1df7f12407f3710c9c6df938d98ec53f70053e6c6bbf71ce7bcb038d42f10070", size = 21971, upload-time = "2024-10-02T00:11:46.936Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/a1/b4/01b00383535b2d07eee066a344ce58f36f3eabc8e4dc069246d4099fab0f/pyright-1.1.224.post0-py3-none-any.whl", hash = "sha256:db6d04aa62dbae6104625858075653152718a4e7a29b6ea519e8e99b1d72fde2", size = 15458, upload-time = "2022-02-25T20:06:06.91Z" },
+    { url = "https://files.pythonhosted.org/packages/1c/55/40a6559cea209b551c81dcd31cb351a6ffdb5876e7865ee242e269af72d8/pyright-1.1.383-py3-none-any.whl", hash = "sha256:d864d1182a313f45aaf99e9bfc7d2668eeabc99b29a556b5344894fd73cb1959", size = 18577, upload-time = "2024-10-02T00:11:45.517Z" },
 ]
 
 [[package]]
