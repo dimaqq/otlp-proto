@@ -260,6 +260,7 @@ jobs:
           merge-multiple: true
       - run: ls -halt dist/
       - run: rm -vf dist/.gitignore  # https://github.com/astral-sh/uv/issues/11652
+      - run: rm -vf dist/*riscv64*  # https://github.com/pypa/manylinux/discussions/1426
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
