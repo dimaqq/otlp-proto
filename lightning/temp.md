@@ -14,11 +14,28 @@ Foo
 blablabla
 ---
 
-oi
+oi `one` and ``two``.
 
 
 <!-- end_slide -->
 <!-- font_size: 2 -->
+Python
+==
+
+```python
+resource_cache: dict[Resource, tuple] = {}
+scope_cache: dict[InstrumentationScope, tuple] = {}
+
+def linearise(span: ReadableSpan):
+    ...
+    # use resource_cache
+    # use scope_cache
+
+spans = sorted(spans, key=linearise)
+```
+
+Rust
+==
 
 ```rust
 let builtins = PyModule::import(py, "builtins")?;
@@ -27,7 +44,9 @@ let scope_cache = PyDict::new(py);
 
 let key = m.getattr("functools")?.call_method1(
     "partial",
-    (m.getattr("_linearise")?, resource_cache, scope_cache),
+    (m.getattr("_linearise")?,
+     resource_cache,
+     scope_cache),
 )?;
 let kwargs = [("key", key)].into_py_dict(py)?;
 
