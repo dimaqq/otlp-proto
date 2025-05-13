@@ -1,7 +1,9 @@
 use prost::Message;
-//use pyo3::ffi::c_str;
+use pyo3::exceptions::PyValueError;
+use pyo3::ffi;
 use pyo3::prelude::*;
 use pyo3::types::{IntoPyDict, PyAny, PyDict, PyString, PyTuple};
+use std::ptr;
 
 mod otlp {
     pub mod common {
@@ -46,7 +48,7 @@ use crate::otlp::{
 
 /// Convert something that satisfies Python dict[str, str] protocol.
 /// Must be done with a hack, because OTEL attributes are a mapping, not a dict.
-fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
+fn dict_like_to_kv( m: &Bound<'_, PyModule>, py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
     let items = py_mapping.call_method0("items")?.try_iter()?;
     Ok(items
         .filter_map(|item| {
@@ -70,12 +72,20 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
             // FIXME: not sure about this, would this not break out for a bad value?
             } else if let Ok(s) = v.str().ok()?.extract::<String>() {
                 Value::StringValue(s)
+            // FIXME: the attribute type mapping appears to suggest that empty values
+            // are OK, yielding an AnyValue with every field unset
+            // However, I think that OTLP spec is clear that attributes should only be
+            // bool|int|float|str or a homogeneous array thereof.
+            } else if m.getattr("builtins")?
+                .call_method1("isinstance", (v, m.getattr("abc")?.getattr("Sequence")?))?
+                .extract::<bool>()?
+            {
+                // FIXME: process array value here properly
+                return Ok(None);
             } else {
-                // FIXME: the attribute type mapping appears to suggest that empty values
-                // are OK, yielding an AnyValue with every field unset
-                // However, I think that OTLP spec is clear that attributes should only be
-                // bool|int|float|str or a homogeneous array thereof.
-                return None;
+                return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+                    "Unsupported attribute value type",
+                ));
             };
             // FIXME: arrays of things... to ArrayValue
             // FIXME: mappings of things... to KeyValueList
@@ -89,20 +99,36 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
 }
 
 #[pyfunction]
-#[pyo3(signature = (resource_cache, scope_cache, span))]
+#[pyo3(signature = (value))]
+fn _ensure_homogeneous(value: &Bound<'_, PyAny>) -> PyResult<()> {
+    let mut last: *mut ffi::PyObject = ptr::null_mut();
+    for v in value.try_iter()? {
+        let class = v?.get_type().as_ptr();
+        if !last.is_null() && last != class {
+            return Err(PyValueError::new_err(
+                "Attribute value arrays must be homogeneous",
+            ));
+        }
+        last = class;
+    }
+    Ok(())
+}
+
+#[pyfunction]
+#[pyo3(signature = (resource_cache, scope_cache, span), pass_module)]
 fn _linearise(
-    py: Python<'_>,
+    m: &Bound<'_, PyModule>,
     resource_cache: Bound<'_, PyDict>,
     scope_cache: Bound<'_, PyDict>,
     span: Bound<'_, PyAny>,
 ) -> PyResult<PyObject> {
-    let builtins = PyModule::import(py, "builtins")?;
+    let builtins = m.getattr("builtins")?;
     let r = span.getattr("resource")?;
     if !resource_cache.contains(r.as_ref())? {
         resource_cache.set_item(
             r.as_ref(),
             PyTuple::new(
-                py,
+                m.py(),
                 &[
                     &r.getattr("schema_url")?,
                     &builtins.call_method1(
@@ -118,7 +144,7 @@ fn _linearise(
         scope_cache.set_item(
             s.as_ref(),
             PyTuple::new(
-                py,
+                m.py(),
                 &[
                     &s.getattr("schema_url")?,
                     &s.getattr("name")?,
@@ -133,7 +159,7 @@ fn _linearise(
     }
 
     let rv = PyTuple::new(
-        py,
+        m.py(),
         &[
             &resource_cache.get_item(r.as_ref())?,
             &scope_cache.get_item(s.as_ref())?,
@@ -186,7 +212,6 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
     // That groups spans by their ancestry, and emission is done in a simple loop.
 
     Python::with_gil(|py| {
-        let builtins = PyModule::import(py, "builtins")?;
         let resource_cache = PyDict::new(py);
         let scope_cache = PyDict::new(py);
         let key = m.getattr("functools")?.call_method1(
@@ -194,7 +219,7 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
             (m.getattr("_linearise")?, resource_cache, scope_cache),
         )?;
         let kwargs = [("key", key)].into_py_dict(py)?;
-        let spans = builtins.call_method("sorted", (sdk_spans.as_ref(),), Some(&kwargs))?;
+        let spans = m.getattr("builtins")?.call_method("sorted", (sdk_spans.as_ref(),), Some(&kwargs))?;
 
         let mut last_resource = py.None().into_pyobject(py)?;
         let mut last_scope = py.None().into_pyobject(py)?;
@@ -212,7 +237,7 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
 
                 request.resource_spans.push(ResourceSpans {
                     resource: Some(Resource {
-                        attributes: dict_like_to_kv(&last_resource.getattr("attributes")?)?,
+                        attributes: dict_like_to_kv(m, &last_resource.getattr("attributes")?)?,
                         // dropped_attribute_count: ...
                         ..Default::default()
                     }),
@@ -332,7 +357,9 @@ fn test_tuple(py: Python<'_>, arg: Bound<'_, PyAny>) -> PyResult<PyObject> {
 fn otlp_proto(m: &Bound<'_, PyModule>) -> PyResult<()> {
     Python::with_gil(|py| -> PyResult<()> {
         m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf"))?;
+        m.add("builtins", py.import("builtins")?)?;
         m.add("functools", py.import("functools")?)?;
+        m.add("abc", py.import("collections.abc")?)?;
         Ok(())
     })?;
     m.add_function(wrap_pyfunction!(encode_spans, m)?)?;
