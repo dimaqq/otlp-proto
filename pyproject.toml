@@ -40,6 +40,7 @@ dev = [
     "opentelemetry-sdk ~= 1.30",  # Only needed for types in otlp_proto.pyi
     "pyright >= 1.1.383",
     "ruff ~= 0.9",
+    "ty",
 ]
 testing = [
     "pytest ~= 8.3.4",

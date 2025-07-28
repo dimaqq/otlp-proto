@@ -28,6 +28,7 @@ jobs:
           uv run $UV_ARGS pytest
           uv run $UV_ARGS pyright
           uv run $UV_ARGS ruff check
+          uv run $UV_ARGS ty check
           uv pip freeze
 
   test-on-win:
@@ -52,6 +53,7 @@ jobs:
           uv run $UV_ARGS pytest
           uv run $UV_ARGS pyright
           uv run $UV_ARGS ruff check
+          uv run $UV_ARGS ty check
           uv pip freeze
         shell: bash
 
@@ -77,6 +79,7 @@ jobs:
           uv run $UV_ARGS pytest
           uv run $UV_ARGS pyright
           uv run $UV_ARGS ruff check
+          uv run $UV_ARGS ty check
           uv pip freeze
 
   linux:
@@ -260,6 +263,7 @@ jobs:
           merge-multiple: true
       - run: ls -halt dist/
       - run: rm -vf dist/.gitignore  # https://github.com/astral-sh/uv/issues/11652
+      - run: ls -la dist
       - uses: pypa/gh-action-pypi-publish@release/v1
         with:
           repository-url: https://test.pypi.org/legacy/
