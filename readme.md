@@ -6,6 +6,14 @@ It's written in Rust 🦀, and doesn't have any run-time dependencies.
 
 It serialises a bunch of spans into OTLP 1.5 binary (protobuf) format.
 
+# ⚠️ Looking for maintainer! ⚠️
+
+I don't have time to work on this project.
+
+It's in a usable state now, but will lag behind features introduced in OpenTelemetry.
+
+Please get in touch (e.g. open an issue) if you're interested!
+
 ### Motivation
 
 Tracing should be on by default.
