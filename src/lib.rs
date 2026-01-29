@@ -90,19 +90,19 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
 }
 
 #[pyfunction]
-#[pyo3(signature = (resource_cache, scope_cache, span))]
+#[pyo3(signature = (resource_cache, scope_cache, span), pass_module)]
 fn _linearise(
-    py: Python<'_>,
+    m: &Bound<'_, PyModule>,
     resource_cache: Bound<'_, PyDict>,
     scope_cache: Bound<'_, PyDict>,
     span: Bound<'_, PyAny>,
 ) -> PyResult<Py<PyAny>> {
-    let builtins = PyModule::import(py, "builtins")?;
+    let tuple = m.getattr("tuple")?;
+    let py = m.py();
     let r = span.getattr("resource")?;
     if !resource_cache.contains(&r)? {
         let r_attrs_items = r.getattr("attributes")?.call_method0("items")?;
-        let tuple_callable = builtins.getattr("tuple")?;
-        let r_attrs_tuple = tuple_callable.call1((r_attrs_items,))?;
+        let r_attrs_tuple = tuple.call1((r_attrs_items,))?;
         resource_cache.set_item(
             &r,
             PyTuple::new(py, &[&r.getattr("schema_url")?, &r_attrs_tuple])?,
@@ -113,8 +113,7 @@ fn _linearise(
         // InstrumentationScope.attributes is optional in OTLP spec
         let scope_attrs = if let Ok(attrs) = s.getattr("attributes") {
             let attrs_items = attrs.call_method0("items")?;
-            let tuple_callable = builtins.getattr("tuple")?;
-            tuple_callable.call1((attrs_items,))?
+            tuple.call1((attrs_items,))?
         } else {
             PyTuple::empty(py).into_any()
         };
@@ -187,10 +186,8 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
     let builtins = PyModule::import(py, "builtins")?;
     let resource_cache = PyDict::new(py);
     let scope_cache = PyDict::new(py);
-    let key = m.getattr("functools")?.call_method1(
-        "partial",
-        (m.getattr("_linearise")?, resource_cache, scope_cache),
-    )?;
+    let partial = m.getattr("partial")?;
+    let key = partial.call1((m.getattr("_linearise")?, resource_cache, scope_cache))?;
     let kwargs = [("key", key)].into_py_dict(py)?;
     let spans = builtins.call_method("sorted", (&sdk_spans,), Some(&kwargs))?;
 
@@ -329,7 +326,8 @@ fn test_tuple(py: Python<'_>, arg: Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
 fn otlp_proto(m: &Bound<'_, PyModule>) -> PyResult<()> {
     let py = m.py();
     m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf"))?;
-    m.add("functools", py.import("functools")?)?;
+    m.add("partial", py.import("functools")?.getattr("partial")?)?;
+    m.add("tuple", py.import("builtins")?.getattr("tuple")?)?;
     m.add_function(wrap_pyfunction!(encode_spans, m)?)?;
     m.add_function(wrap_pyfunction!(test_tuple, m)?)?;
     m.add_function(wrap_pyfunction!(_linearise, m)?)?;
