@@ -2,7 +2,8 @@ version = 1
 revision = 3
 requires-python = ">=3.10"
 resolution-markers = [
-    "python_full_version >= '3.13'",
+    "python_full_version >= '3.14'",
+    "python_full_version == '3.13.*'",
     "python_full_version < '3.13'",
 ]
 
@@ -401,6 +402,7 @@ dev = [
 ]
 equivalence-testing = [
     { name = "otlp-test-data" },
+    { name = "protobuf", marker = "python_full_version >= '3.14'" },
 ]
 testing = [
     { name = "pytest" },
@@ -417,7 +419,10 @@ dev = [
     { name = "pyright", specifier = ">=1.1.383" },
     { name = "ruff", specifier = "~=0.9" },
 ]
-equivalence-testing = [{ name = "otlp-test-data", specifier = "==0.9.4" }]
+equivalence-testing = [
+    { name = "otlp-test-data", specifier = "==0.9.4" },
+    { name = "protobuf", marker = "python_full_version >= '3.14'", specifier = ">=5.26.0" },
+]
 testing = [
     { name = "pytest", specifier = "~=8.3.4" },
     { name = "typing-extensions", specifier = ">=4.1.0" },

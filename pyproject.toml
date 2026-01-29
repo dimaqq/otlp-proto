@@ -17,6 +17,7 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Programming Language :: Python :: 3 :: Only",
     "Programming Language :: Python :: Implementation :: CPython",
     "Programming Language :: Python :: Implementation :: PyPy",
@@ -25,7 +26,6 @@ classifiers = [
     "Framework :: OpenTelemetry",
     "Framework :: OpenTelemetry :: Exporters",
 ]
-dependencies = []
 
 [project.urls]
 "Repository" = "https://github.com/dimaqq/otlp-proto"
@@ -46,6 +46,7 @@ testing = [
 equivalence-testing = [
     # FIXME needs an update, which needs fixes in the Rust implementation
     "otlp-test-data == 0.9.4",
+    "protobuf >= 5.26.0; python_version >= '3.14'",
 ]
 
 [build-system]
