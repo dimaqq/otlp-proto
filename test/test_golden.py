@@ -22,6 +22,7 @@ def test_golden(pytestconfig):
     scope.name = "na"
     scope.version = "42.0"
     scope.schema_url = "http://s.example"
+    scope.attributes = {}  # InstrumentationScope can have attributes
 
     span1 = Mock()
     span1.name = "s1"
