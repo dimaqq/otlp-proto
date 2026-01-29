@@ -51,6 +51,7 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
     Ok(items
         .filter_map(|item| {
             let pair = item.ok()?;
+            // In PyO3 0.27, we need to get items from the tuple using get_item with usize
             let key = pair.get_item(0).ok()?.extract::<String>().ok()?;
             let v = pair.get_item(1).ok()?;
 
@@ -99,22 +100,25 @@ fn _linearise(
     let builtins = PyModule::import(py, "builtins")?;
     let r = span.getattr("resource")?;
     if !resource_cache.contains(&r)? {
+        let r_attrs_items = r.getattr("attributes")?.call_method0("items")?;
+        let tuple_callable = builtins.getattr("tuple")?;
+        let r_attrs_tuple = tuple_callable.call1((r_attrs_items,))?;
         resource_cache.set_item(
             &r,
-            PyTuple::new(
-                py,
-                &[
-                    &r.getattr("schema_url")?,
-                    &builtins.call_method1(
-                        "tuple",
-                        (&r.getattr("attributes")?.call_method0("items")?,),
-                    )?,
-                ],
-            )?,
+            PyTuple::new(py, &[&r.getattr("schema_url")?, &r_attrs_tuple])?,
         )?;
     }
     let s = span.getattr("instrumentation_scope")?;
     if !scope_cache.contains(&s)? {
+        // InstrumentationScope.attributes is optional in OTLP spec
+        let scope_attrs = if let Ok(attrs) = s.getattr("attributes") {
+            let attrs_items = attrs.call_method0("items")?;
+            let tuple_callable = builtins.getattr("tuple")?;
+            tuple_callable.call1((attrs_items,))?
+        } else {
+            PyTuple::empty(py).into_any()
+        };
+
         scope_cache.set_item(
             &s,
             PyTuple::new(
@@ -123,10 +127,7 @@ fn _linearise(
                     &s.getattr("schema_url")?,
                     &s.getattr("name")?,
                     &s.getattr("version")?,
-                    &builtins.call_method1(
-                        "tuple",
-                        (&s.getattr("attributes")?.call_method0("items")?,),
-                    )?,
+                    &scope_attrs,
                 ],
             )?,
         )?;
@@ -191,7 +192,7 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
         (m.getattr("_linearise")?, resource_cache, scope_cache),
     )?;
     let kwargs = [("key", key)].into_py_dict(py)?;
-    let spans = builtins.call_method("sorted", (sdk_spans,), Some(&kwargs))?;
+    let spans = builtins.call_method("sorted", (&sdk_spans,), Some(&kwargs))?;
 
     let mut last_resource = py.None().into_pyobject(py)?;
     let mut last_scope = py.None().into_pyobject(py)?;
