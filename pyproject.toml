@@ -3,7 +3,7 @@ name = "otlp-proto"
 version = "0.10.1"
 description = "🐍Lightweight OTEL span to binary converter, written in Rust🦀"
 readme = "readme.md"
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 license = "MIT"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -35,7 +35,7 @@ dependencies = []
 
 [dependency-groups]
 dev = [
-    "maturin ~= 1.8",
+    "maturin ~= 1.11",
     "opentelemetry-api ~= 1.30",  # 1.30 fixed type hints for Python 3.8
     "opentelemetry-sdk ~= 1.30",  # Only needed for types in otlp_proto.pyi
     "pyright >= 1.1.383",

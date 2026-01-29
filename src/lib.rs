@@ -95,28 +95,28 @@ fn _linearise(
     resource_cache: Bound<'_, PyDict>,
     scope_cache: Bound<'_, PyDict>,
     span: Bound<'_, PyAny>,
-) -> PyResult<PyObject> {
+) -> PyResult<Py<PyAny>> {
     let builtins = PyModule::import(py, "builtins")?;
     let r = span.getattr("resource")?;
-    if !resource_cache.contains(r.as_ref())? {
+    if !resource_cache.contains(&r)? {
         resource_cache.set_item(
-            r.as_ref(),
+            &r,
             PyTuple::new(
                 py,
                 &[
                     &r.getattr("schema_url")?,
                     &builtins.call_method1(
                         "tuple",
-                        (r.getattr("attributes")?.call_method0("items")?,),
+                        (&r.getattr("attributes")?.call_method0("items")?,),
                     )?,
                 ],
             )?,
         )?;
     }
     let s = span.getattr("instrumentation_scope")?;
-    if !scope_cache.contains(s.as_ref())? {
+    if !scope_cache.contains(&s)? {
         scope_cache.set_item(
-            s.as_ref(),
+            &s,
             PyTuple::new(
                 py,
                 &[
@@ -125,7 +125,7 @@ fn _linearise(
                     &s.getattr("version")?,
                     &builtins.call_method1(
                         "tuple",
-                        (r.getattr("attributes")?.call_method0("items")?,),
+                        (&s.getattr("attributes")?.call_method0("items")?,),
                     )?,
                 ],
             )?,
@@ -134,10 +134,7 @@ fn _linearise(
 
     let rv = PyTuple::new(
         py,
-        &[
-            &resource_cache.get_item(r.as_ref())?,
-            &scope_cache.get_item(s.as_ref())?,
-        ],
+        &[&resource_cache.get_item(&r)?, &scope_cache.get_item(&s)?],
     )?;
     Ok(rv.into_any().unbind())
 }
@@ -185,135 +182,134 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
     // by resource and instrumentation scope.
     // That groups spans by their ancestry, and emission is done in a simple loop.
 
-    Python::with_gil(|py| {
-        let builtins = PyModule::import(py, "builtins")?;
-        let resource_cache = PyDict::new(py);
-        let scope_cache = PyDict::new(py);
-        let key = m.getattr("functools")?.call_method1(
-            "partial",
-            (m.getattr("_linearise")?, resource_cache, scope_cache),
-        )?;
-        let kwargs = [("key", key)].into_py_dict(py)?;
-        let spans = builtins.call_method("sorted", (sdk_spans.as_ref(),), Some(&kwargs))?;
+    let py = m.py();
+    let builtins = PyModule::import(py, "builtins")?;
+    let resource_cache = PyDict::new(py);
+    let scope_cache = PyDict::new(py);
+    let key = m.getattr("functools")?.call_method1(
+        "partial",
+        (m.getattr("_linearise")?, resource_cache, scope_cache),
+    )?;
+    let kwargs = [("key", key)].into_py_dict(py)?;
+    let spans = builtins.call_method("sorted", (sdk_spans,), Some(&kwargs))?;
 
-        let mut last_resource = py.None().into_pyobject(py)?;
-        let mut last_scope = py.None().into_pyobject(py)?;
-        let mut request = ExportTraceServiceRequest {
-            resource_spans: Vec::new(),
-            ..Default::default()
-        };
+    let mut last_resource = py.None().into_pyobject(py)?;
+    let mut last_scope = py.None().into_pyobject(py)?;
+    let mut request = ExportTraceServiceRequest {
+        resource_spans: Vec::new(),
+        ..Default::default()
+    };
 
-        for item in spans.try_iter()? {
-            let span = item?;
-            // .resource cannot be None
-            if !span.getattr("resource")?.is(&last_resource) {
-                last_resource = span.getattr("resource")?;
-                last_scope = py.None().into_pyobject(py)?;
+    for item in spans.try_iter()? {
+        let span = item?;
+        // .resource cannot be None
+        if !span.getattr("resource")?.is(&last_resource) {
+            last_resource = span.getattr("resource")?;
+            last_scope = py.None().into_pyobject(py)?;
 
-                request.resource_spans.push(ResourceSpans {
-                    resource: Some(Resource {
-                        attributes: dict_like_to_kv(&last_resource.getattr("attributes")?)?,
-                        // dropped_attribute_count: ...
-                        ..Default::default()
-                    }),
-                    scope_spans: Vec::new(),
-                    // schema_url: ...
+            request.resource_spans.push(ResourceSpans {
+                resource: Some(Resource {
+                    attributes: dict_like_to_kv(&last_resource.getattr("attributes")?)?,
+                    // dropped_attribute_count: ...
                     ..Default::default()
-                });
-            }
-            // .instrumentation_scope cannot be None
-            if !span.getattr("instrumentation_scope")?.is(&last_scope) {
-                last_scope = span.getattr("instrumentation_scope")?;
-
-                request
-                    .resource_spans
-                    .last_mut()
-                    .expect(".resource_spans can't be empty")
-                    .scope_spans
-                    .push(ScopeSpans {
-                        scope: Some(InstrumentationScope {
-                            // TODO can name be missing?
-                            name: last_scope.getattr("name")?.extract::<String>()?,
-                            // TODO what if the version is missing?
-                            version: last_scope.getattr("version")?.extract::<String>()?,
-                            // schema_url: ...
-                            ..Default::default()
-                        }),
-                        spans: Vec::new(),
-                        // schema_url: ...
-                        ..Default::default()
-                    });
-            }
-
-            let context = span.getattr("context")?;
-            let status = span.getattr("status")?;
+                }),
+                scope_spans: Vec::new(),
+                // schema_url: ...
+                ..Default::default()
+            });
+        }
+        // .instrumentation_scope cannot be None
+        if !span.getattr("instrumentation_scope")?.is(&last_scope) {
+            last_scope = span.getattr("instrumentation_scope")?;
 
             request
                 .resource_spans
                 .last_mut()
                 .expect(".resource_spans can't be empty")
                 .scope_spans
-                .last_mut()
-                .expect(".scope_spans can't be empty")
-                .spans
-                .push(Span {
-                    trace_id: context
-                        .getattr("trace_id")?
-                        .extract::<u128>()?
-                        .to_be_bytes()
-                        .to_vec(),
-                    span_id: context
-                        .getattr("span_id")?
-                        .extract::<u64>()?
-                        .to_be_bytes()
-                        .to_vec(),
-                    // FIXME: parent_span_id = span.parent?.span_id or unset
-                    // TODO: context.trace_state??
-                    name: span.getattr("name")?.extract::<String>()?,
-                    kind: span
-                        .getattr("kind")
-                        .and_then(|k| k.extract::<i32>())
-                        // TODO: special logic for remote spans?
-                        .unwrap_or(SpanKind::Internal as i32),
-                    start_time_unix_nano: span
-                        .getattr("start_time")
-                        .and_then(|t| t.extract::<u64>())
-                        .unwrap_or_default(),
-                    end_time_unix_nano: span
-                        .getattr("end_time")
-                        .and_then(|t| t.extract::<u64>())
-                        .unwrap_or_default(),
-                    flags: span
-                        .getattr("flags") // FIXME: span.parent?.WTF
-                        .and_then(|f| f.extract::<u32>())
-                        .unwrap_or(256),
-                    // TODO:
-                    // - dropped_attributes_count
-                    // - events
-                    // - dropped_events_count
-                    // - links
-                    // - dropped_links_count
-                    // TODO: Python drops this struct if the field is None
-                    status: Some(Status {
-                        // status is always set, and status_code too
-                        code: status
-                            .getattr("status_code")?
-                            .getattr("value")?
-                            .extract::<i32>()?,
-                        // logically optional. empty str or none?
-                        message: status
-                            .getattr("description")
-                            .ok()
-                            .and_then(|d| d.extract::<String>().ok())
-                            .unwrap_or_default(),
+                .push(ScopeSpans {
+                    scope: Some(InstrumentationScope {
+                        // TODO can name be missing?
+                        name: last_scope.getattr("name")?.extract::<String>()?,
+                        // TODO what if the version is missing?
+                        version: last_scope.getattr("version")?.extract::<String>()?,
+                        // schema_url: ...
                         ..Default::default()
                     }),
+                    spans: Vec::new(),
+                    // schema_url: ...
                     ..Default::default()
                 });
         }
 
-        Ok(request.encode_to_vec())
-    })
+        let context = span.getattr("context")?;
+        let status = span.getattr("status")?;
+
+        request
+            .resource_spans
+            .last_mut()
+            .expect(".resource_spans can't be empty")
+            .scope_spans
+            .last_mut()
+            .expect(".scope_spans can't be empty")
+            .spans
+            .push(Span {
+                trace_id: context
+                    .getattr("trace_id")?
+                    .extract::<u128>()?
+                    .to_be_bytes()
+                    .to_vec(),
+                span_id: context
+                    .getattr("span_id")?
+                    .extract::<u64>()?
+                    .to_be_bytes()
+                    .to_vec(),
+                // FIXME: parent_span_id = span.parent?.span_id or unset
+                // TODO: context.trace_state??
+                name: span.getattr("name")?.extract::<String>()?,
+                kind: span
+                    .getattr("kind")
+                    .and_then(|k| k.extract::<i32>())
+                    // TODO: special logic for remote spans?
+                    .unwrap_or(SpanKind::Internal as i32),
+                start_time_unix_nano: span
+                    .getattr("start_time")
+                    .and_then(|t| t.extract::<u64>())
+                    .unwrap_or_default(),
+                end_time_unix_nano: span
+                    .getattr("end_time")
+                    .and_then(|t| t.extract::<u64>())
+                    .unwrap_or_default(),
+                flags: span
+                    .getattr("flags") // FIXME: span.parent?.WTF
+                    .and_then(|f| f.extract::<u32>())
+                    .unwrap_or(256),
+                // TODO:
+                // - dropped_attributes_count
+                // - events
+                // - dropped_events_count
+                // - links
+                // - dropped_links_count
+                // TODO: Python drops this struct if the field is None
+                status: Some(Status {
+                    // status is always set, and status_code too
+                    code: status
+                        .getattr("status_code")?
+                        .getattr("value")?
+                        .extract::<i32>()?,
+                    // logically optional. empty str or none?
+                    message: status
+                        .getattr("description")
+                        .ok()
+                        .and_then(|d| d.extract::<String>().ok())
+                        .unwrap_or_default(),
+                    ..Default::default()
+                }),
+                ..Default::default()
+            });
+    }
+
+    Ok(request.encode_to_vec())
     // FIXME TODO
     // Events
     // Baggage
@@ -321,20 +317,18 @@ fn encode_spans(m: &Bound<'_, PyModule>, sdk_spans: &Bound<'_, PyAny>) -> PyResu
 }
 
 #[pyfunction]
-fn test_tuple(py: Python<'_>, arg: Bound<'_, PyAny>) -> PyResult<PyObject> {
+fn test_tuple(py: Python<'_>, arg: Bound<'_, PyAny>) -> PyResult<Py<PyAny>> {
     let builtins = PyModule::import(py, "builtins")?;
-    let rv = builtins.call_method1("tuple", (arg.as_ref(),))?;
+    let rv = builtins.call_method1("tuple", (&arg,))?;
     Ok(rv.unbind())
 }
 
 /// 🐍Lightweight OTEL span to binary converter, written in Rust🦀
 #[pymodule(gil_used = false)]
 fn otlp_proto(m: &Bound<'_, PyModule>) -> PyResult<()> {
-    Python::with_gil(|py| -> PyResult<()> {
-        m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf"))?;
-        m.add("functools", py.import("functools")?)?;
-        Ok(())
-    })?;
+    let py = m.py();
+    m.add("CONTENT_TYPE", PyString::new(py, "application/x-protobuf"))?;
+    m.add("functools", py.import("functools")?)?;
     m.add_function(wrap_pyfunction!(encode_spans, m)?)?;
     m.add_function(wrap_pyfunction!(test_tuple, m)?)?;
     m.add_function(wrap_pyfunction!(_linearise, m)?)?;
