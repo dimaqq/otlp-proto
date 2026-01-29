@@ -51,7 +51,6 @@ fn dict_like_to_kv(py_mapping: &Bound<'_, PyAny>) -> PyResult<Vec<KeyValue>> {
     Ok(items
         .filter_map(|item| {
             let pair = item.ok()?;
-            // In PyO3 0.27, we need to get items from the tuple using get_item with usize
             let key = pair.get_item(0).ok()?.extract::<String>().ok()?;
             let v = pair.get_item(1).ok()?;
 
@@ -110,7 +109,6 @@ fn _linearise(
     }
     let s = span.getattr("instrumentation_scope")?;
     if !scope_cache.contains(&s)? {
-        // InstrumentationScope.attributes is optional in OTLP spec
         let scope_attrs = if let Ok(attrs) = s.getattr("attributes") {
             let attrs_items = attrs.call_method0("items")?;
             tuple.call1((attrs_items,))?
