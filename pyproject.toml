@@ -13,8 +13,6 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -36,7 +34,7 @@ dependencies = []
 [dependency-groups]
 dev = [
     "maturin ~= 1.11",
-    "opentelemetry-api ~= 1.30",  # 1.30 fixed type hints for Python 3.8
+    "opentelemetry-api ~= 1.30",
     "opentelemetry-sdk ~= 1.30",  # Only needed for types in otlp_proto.pyi
     "pyright >= 1.1.383",
     "ruff ~= 0.9",
